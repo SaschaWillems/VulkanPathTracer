@@ -1,0 +1,33 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_GOOGLE_include_directive : require
+
+#include "includes/random.glsl"
+#include "includes/material.glsl"
+#include "includes/ubo.glsl"
+
+hitAttributeEXT vec3 attribs;
+
+layout(binding = 3, set = 0) uniform UniformData { Ubo ubo; };
+layout(binding = 4, set = 0) buffer Vertices { vec4 vertices[]; };
+layout(binding = 5, set = 0) buffer Indices { uint indices[]; };
+layout(binding = 6, set = 0) readonly buffer Materials { Material materials[]; };
+layout(binding = 7, set = 0) uniform sampler2D[] textures;
+
+#include "includes/geometry.glsl"
+
+// The any hit shader is used for alpha masked textures
+
+void main()
+{
+	Triangle tri = unpackTriangle(gl_PrimitiveID, ubo.vertexSize);
+	Material mat = materials[tri.materialIndex];
+	// Ignore intersections for alpha masked hits
+	if (mat.baseColorTextureIndex > -1) {
+		vec4 color = texture(textures[mat.baseColorTextureIndex], tri.uv);
+		if (color.a < 0.9) {
+			ignoreIntersectionEXT;
+		}
+	}
+}

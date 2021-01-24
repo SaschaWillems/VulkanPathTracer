@@ -1,0 +1,70 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "includes/random.glsl"
+#include "includes/raypayload.glsl"
+#include "includes/ubo.glsl"
+
+layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
+layout(binding = 1, set = 0, rgba8) uniform image2D outputImage;
+layout(binding = 2, set = 0, rgba32f) uniform image2D accumulationImage;
+layout(binding = 3, set = 0) uniform UniformData { Ubo ubo; };
+
+layout(location = 0) rayPayloadEXT RayPayload rayPayload;
+
+void main() 
+{
+	// Initialize a random number state based on current fragment position and sample count
+    uint rngState = uint(uint(gl_LaunchIDEXT.x) * uint(1973) + uint(gl_LaunchIDEXT.y) * uint(9277) + uint(ubo.currentSamplesCount) * uint(26699)) | uint(1); 
+	rayPayload.randomSeed = rngState;
+
+	// Nested loop for samples x bounces
+	vec3 color = vec3(0.0);
+	// Samples
+	for (uint i = 0; i < ubo.samplesPerFrame; i++)
+	{
+		vec4 origin = ubo.viewInverse * vec4(0.0, 0.0, 0.0, 1.0);
+		// Apply jitter to anti alias
+		vec2 jitter = vec2(RandomFloat01(rngState), RandomFloat01(rngState)) - 0.5;
+		vec4 target = ubo.projInverse * vec4((gl_LaunchIDEXT.xy + jitter) / gl_LaunchSizeEXT.xy * 2.0 - 1.0, 0.0, 1.0);
+		vec4 direction = ubo.viewInverse * vec4(normalize(target.xyz), 0.0);
+
+		// Bounces
+		vec3 sampleColor = vec3(1.0);
+		for (uint j = 0; j <= ubo.rayBounces; j++)
+		{
+			// Break if the final bounce has not hit any light source
+			if ((ubo.rayBounces > 0) && (j == ubo.rayBounces)) {
+				break;
+			}
+			// Trace the ray
+			traceRayEXT(topLevelAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, origin.xyz, 0.001, direction.xyz, 10000.0, 0);		
+			sampleColor *= rayPayload.color;
+			// End of trace if the ray didn't hit anything or is no longer supposed to scatter
+			if (rayPayload.distance < 0 || !rayPayload.doScatter) {				
+				break;
+			}
+			// New origin and direction from last hit point
+			origin = origin + rayPayload.distance * direction;
+			direction = vec4(rayPayload.scatterDir, 0.0);
+		}
+
+		color += sampleColor;
+	}
+
+	// Check if we need to fetch values from the last frame
+	vec3 lastFrameColor = vec3(0.0);
+	if (ubo.samplesPerFrame != ubo.currentSamplesCount) {
+		lastFrameColor = imageLoad(accumulationImage, ivec2(gl_LaunchIDEXT.xy)).rgb;
+	};
+	// Add current frame's color to accumulated color and store
+	vec3 accumulatedColor = lastFrameColor + color;
+	imageStore(accumulationImage, ivec2(gl_LaunchIDEXT.xy), vec4(accumulatedColor, 0.0));
+
+	// Get display color
+	color = accumulatedColor / ubo.currentSamplesCount;
+	// Gamma correction
+	color = pow(color, vec3(1.0/2.2));
+    imageStore(outputImage, ivec2(gl_LaunchIDEXT.xy), vec4(color, 0));
+}
