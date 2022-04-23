@@ -77,7 +77,6 @@ public:
 		int32_t baseColorTextureIndex;
 		int32_t normalTextureIndex;
 		MaterialType type;
-		float _pad;
 	};
 
 	std::vector<vkglTF::Model> models;
@@ -90,6 +89,13 @@ public:
 	} scene;
 
 	uint32_t sceneIndex = 3;
+
+	struct SceneModelInfo {
+		uint64_t vertices;
+		uint64_t indices;
+		uint64_t materials;
+	};
+	vks::Buffer sceneDescBuffer;
 
 	VulkanPathTracer();
 	~VulkanPathTracer();

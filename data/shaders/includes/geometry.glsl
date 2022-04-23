@@ -1,41 +1,25 @@
 // Wraps access to the unpacked data at the current barycentric position of a single triangle
 
-struct Vertex
-{
-  vec3 pos;
-  vec3 normal;
-  vec2 uv;
-  vec4 color;
-  vec4 joint0; 
-  vec4 weight0;
-  vec4 tangent;
-  int materialIndex;
-};
-
-struct Triangle {
-	Vertex vertices[3];
-	vec3 normal;
-	vec4 tangent;
-	vec2 uv;
-	vec4 color;
-	int materialIndex;
-};
-
 Triangle unpackTriangle(uint index, int vertexSize) {
 	Triangle tri;
 	const uint triIndex = index * 3;
+
+	ObjBuffers objResource = scene_desc.i[gl_InstanceCustomIndexEXT];
+	Indices    indices     = Indices(objResource.indices);
+	Vertices   vertices    = Vertices(objResource.vertices);
+
 	// Unpack vertices
 	// Data is packed as vec4 so we can map to the glTF vertex structure from the host side
 	for (uint i = 0; i < 3; i++) {
-		const uint offset = indices[triIndex + i] * (vertexSize / 16);
+		const uint offset = indices.i[triIndex + i] * (vertexSize / 16);
 
-		vec4 d0 = vertices[offset + 0]; // pos.xyz, n.x
-		vec4 d1 = vertices[offset + 1]; // n.yz, uv.xy
-		vec4 d2 = vertices[offset + 2]; // color
-		vec4 d3 = vertices[offset + 3]; // joint0
-		vec4 d4 = vertices[offset + 4]; // weight0
-		vec4 d5 = vertices[offset + 5]; // tangent
-		vec4 d6 = vertices[offset + 6]; // material
+		vec4 d0 = vertices.v[offset + 0]; // pos.xyz, n.x
+		vec4 d1 = vertices.v[offset + 1]; // n.yz, uv.xy
+		vec4 d2 = vertices.v[offset + 2]; // color
+		vec4 d3 = vertices.v[offset + 3]; // joint0
+		vec4 d4 = vertices.v[offset + 4]; // weight0
+		vec4 d5 = vertices.v[offset + 5]; // tangent
+		vec4 d6 = vertices.v[offset + 6]; // material
 
 		tri.vertices[i].pos = d0.xyz;
 		tri.vertices[i].uv = d1.zw;

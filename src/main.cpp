@@ -37,6 +37,8 @@ VulkanPathTracer::VulkanPathTracer() : VulkanApplication()
 	// Enable required features
 	// Anisotropic filtering
 	enabledFeatures.samplerAnisotropy = VK_TRUE;
+	// Int64
+	enabledFeatures.shaderInt64 = VK_TRUE;
 	// Buffer device address
 	enabledBufferDeviceAddresFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
 	enabledBufferDeviceAddresFeatures.bufferDeviceAddress = VK_TRUE;
@@ -335,18 +337,21 @@ void VulkanPathTracer::createDescriptorSets()
 
 	VkDescriptorImageInfo storageImageDescriptor{ VK_NULL_HANDLE, storageImage.view, VK_IMAGE_LAYOUT_GENERAL };
 	VkDescriptorImageInfo accumImageDescriptor{ VK_NULL_HANDLE, accumulationImage.view, VK_IMAGE_LAYOUT_GENERAL };
-	// @todo
-	VkDescriptorBufferInfo vertexBufferDescriptor{ models[0].vertices.buffer, 0, VK_WHOLE_SIZE };
-	VkDescriptorBufferInfo indexBufferDescriptor{ models[0].indices.buffer, 0, VK_WHOLE_SIZE
-};
+
+	std::vector<VkDescriptorBufferInfo> vBufferInfos(models.size());
+	std::vector<VkDescriptorBufferInfo> iBufferInfos(models.size());
+	for (auto& model : models) {
+		vBufferInfos.push_back({ model.vertices.buffer, 0, VK_WHOLE_SIZE });
+		iBufferInfos.push_back({ model.indices.buffer, 0, VK_WHOLE_SIZE });
+	}
 
 	// Binding points:
 	// 0: Top level acceleration structure
 	// 1: Ray tracing result image
 	// 2: Ray tracing accumulation image
 	// 3: Uniform data
-	// 4: Scene vertex buffer
-	// 5: Scene index buffer
+	// 4: Scene vertex buffers
+	// 5: Scene index buffers
 	// 6: Scene materials buffer
 	// 7: Scene textures (optional)
 
@@ -355,17 +360,18 @@ void VulkanPathTracer::createDescriptorSets()
 		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, &storageImageDescriptor),
 		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2, &accumImageDescriptor),
 		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3, &ubo.descriptor),
-		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &vertexBufferDescriptor),
-		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5, &indexBufferDescriptor),
-		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 6, &scene.materialBuffer.descriptor),
-		
+		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &sceneDescBuffer.descriptor),
+		//vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &scene.materialBuffer.descriptor),
 	};
-	std::vector<VkDescriptorImageInfo> imageInfos(models[0].textures.size());
+
+	std::vector<VkDescriptorImageInfo> imageInfos{};
 	if (models[0].textures.size() > 0) {
-		for (size_t i = 0; i < models[0].textures.size(); i++) {
-			imageInfos[i] = models[0].textures[i].descriptor;
+		for (auto& model : models) {
+			for (size_t i = 0; i < model.textures.size(); i++) {
+				imageInfos.push_back(model.textures[i].descriptor);
+			}
+			writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 5, imageInfos.data(), static_cast<uint32_t>(imageInfos.size())));
 		}
-		writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 7, imageInfos.data(), static_cast<uint32_t>(imageInfos.size())));
 	}
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, VK_NULL_HANDLE);
 }
@@ -388,12 +394,14 @@ void VulkanPathTracer::createRayTracingPipeline()
 		vks::initializers::descriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
 		vks::initializers::descriptorSetLayoutBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_RAYGEN_BIT_KHR),
 		vks::initializers::descriptorSetLayoutBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
-		vks::initializers::descriptorSetLayoutBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
-		vks::initializers::descriptorSetLayoutBinding(5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
-		vks::initializers::descriptorSetLayoutBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
+		vks::initializers::descriptorSetLayoutBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR, static_cast<uint32_t>(models.size())),
 	};
 	if (models[0].textures.size() > 0) {
-		setLayoutBindings.push_back(vks::initializers::descriptorSetLayoutBinding(7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR, static_cast<uint32_t>(models[0].textures.size())));
+		uint32_t texCount{ 0 };
+		for (auto& model : models) {
+			texCount += static_cast<uint32_t>(model.textures.size());
+		}
+		setLayoutBindings.push_back(vks::initializers::descriptorSetLayoutBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR, texCount));
 	}
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings);
 	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayout));
@@ -457,18 +465,23 @@ void VulkanPathTracer::createRayTracingPipeline()
 // Create and fill a buffer for passing the glTF materials to the shaders
 void VulkanPathTracer::createMaterialBuffer()
 {
+	uint32_t textureOffset{ 0 };
 	std::vector<Material> materials;
-	for (vkglTF::Material mat : models[0].materials) {
-		Material material;
-		material.baseColor = mat.baseColorFactor;
-		material.baseColor = glm::vec4(1.0f);
-		material.baseColorTextureIndex = mat.baseColorTexture ? mat.baseColorTexture->index : -1;
-		material.normalTextureIndex = mat.normalTexture ? mat.normalTexture->index : -1;
-		material.type = MaterialType::Lambertian;
-		if (mat.name == "Light") {
-			material.type = MaterialType::Light;
+	for (auto& model : models) {
+		for (vkglTF::Material mat : model.materials) {
+			Material material;
+			material.baseColor = mat.baseColorFactor;
+			material.baseColor = glm::vec4(1.0f);
+			// @todo
+			material.baseColorTextureIndex = mat.baseColorTexture ? mat.baseColorTexture->index + textureOffset : -1;
+			material.normalTextureIndex = mat.normalTexture ? mat.normalTexture->index + textureOffset : -1;
+			material.type = MaterialType::Lambertian;
+			if (mat.name == "Light") {
+				material.type = MaterialType::Light;
+			}
+			materials.push_back(material);
 		}
-		materials.push_back(material);
+		textureOffset += model.textures.size();
 	}
 
 	const VkDeviceSize bufferSize = sizeof(Material) * materials.size();
@@ -476,8 +489,10 @@ void VulkanPathTracer::createMaterialBuffer()
 
 	// Stage to VRAM
 	VK_CHECK_RESULT(vulkanDevice->createBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging, bufferSize, materials.data()));
-	VK_CHECK_RESULT(vulkanDevice->createBuffer(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &scene.materialBuffer, bufferSize));
+	VK_CHECK_RESULT(vulkanDevice->createBuffer(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &scene.materialBuffer, bufferSize));
 	vulkanDevice->copyBuffer(&staging, &scene.materialBuffer, queue);
+
+	// @todo: destroy staging
 }
 
 // Create and fill a uniform buffer for passing camera properties to the shaders
@@ -599,6 +614,8 @@ void VulkanPathTracer::prepare()
 	vkglTF::memoryPropertyFlags = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	const uint32_t glTFLoadingFlags = vkglTF::FileLoadingFlags::PreTransformVertices | vkglTF::PreMultiplyVertexColors | vkglTF::FileLoadingFlags::FlipY;
 
+	sceneIndex = 3;
+
 	if (sceneIndex == 0) {
 		camera.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
 		camera.setTranslation(glm::vec3(0.0f, 1.0f, -3.0f));
@@ -623,6 +640,16 @@ void VulkanPathTracer::prepare()
 		models[0].loadFromFile(getAssetPath() + "models/picapica/scene.gltf", vulkanDevice, queue, glTFLoadingFlags);
 	}
 
+	if (sceneIndex == 3) {
+		camera.setTranslation(glm::vec3(-9.7f, 0.9f, 0.3f));
+		camera.setRotation(glm::vec3(4.75f, -90.0f, 0.0f));
+		options.skyIntensity = 7.5f;
+		models.resize(2);
+		models[0].loadFromFile(getAssetPath() + "models/new_sponza/NewSponza_Main_Blender_glTF_sm.gltf", vulkanDevice, queue, glTFLoadingFlags);
+		models[1].loadFromFile(getAssetPath() + "models/new_sponza_curtains/NewSponza_Curtains_glTF.gltf", vulkanDevice, queue, glTFLoadingFlags);
+	}
+
+
 	// Get ray tracing related properties and features
 	rayTracingPipelineProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 	VkPhysicalDeviceProperties2 deviceProperties2{};
@@ -643,6 +670,24 @@ void VulkanPathTracer::prepare()
 	createTopLevelAccelerationStructure();
 	createMaterialBuffer();
 
+	// Create buffer references for the models in the scene
+	uint32_t matIndexOffset{ 0 };
+	std::vector<SceneModelInfo> sceneModelInfos;
+	for (auto& model : models) {
+		SceneModelInfo info{};
+		info.vertices = getBufferDeviceAddress(model.vertices.buffer);
+		info.indices = getBufferDeviceAddress(model.indices.buffer);
+		info.materials = getBufferDeviceAddress(scene.materialBuffer.buffer) +(matIndexOffset * sizeof(Material));
+		matIndexOffset += static_cast<uint32_t>(model.materials.size());
+		sceneModelInfos.emplace_back(info);
+	}
+	VK_CHECK_RESULT(vulkanDevice->createBuffer(
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		&sceneDescBuffer,
+		sizeof(SceneModelInfo) * static_cast<uint32_t>(sceneModelInfos.size()),
+		sceneModelInfos.data()))
+
 	createImages();
 	createUniformBuffer();
 	createRayTracingPipeline();
@@ -650,6 +695,10 @@ void VulkanPathTracer::prepare()
 	createDescriptorSets();
 	buildCommandBuffers();
 	updateUniformBuffers();
+
+	if (vks::debugmarker::active) {
+		vks::debugmarker::setBufferName(device, scene.materialBuffer.buffer, "Material buffer");
+	}
 
 	prepared = true;
 }

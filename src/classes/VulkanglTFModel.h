@@ -58,7 +58,7 @@ namespace vkglTF
 		uint32_t width, height;
 		uint32_t mipLevels;
 		uint32_t layerCount;
-		VkDescriptorImageInfo descriptor;
+		VkDescriptorImageInfo descriptor{};
 		VkSampler sampler;
 		int32_t index;
 		void updateDescriptor();

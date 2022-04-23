@@ -43,7 +43,8 @@ void AccelerationStructure::create(vks::VulkanDevice* device, VkAccelerationStru
 
 AccelerationStructure::~AccelerationStructure()
 {
-	vkFreeMemory(device->logicalDevice, memory, nullptr);
-	vkDestroyBuffer(device->logicalDevice, buffer, nullptr);
-	vkDestroyAccelerationStructureKHR(device->logicalDevice, handle, nullptr);
+	// @todo
+	//vkFreeMemory(device->logicalDevice, memory, nullptr);
+	//vkDestroyBuffer(device->logicalDevice, buffer, nullptr);
+	//vkDestroyAccelerationStructureKHR(device->logicalDevice, handle, nullptr);
 }

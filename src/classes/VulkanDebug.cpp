@@ -52,9 +52,9 @@ namespace vks
 			}
 #else
 			if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-				std::cerr << debugMessage.str() << "\n";
+				std::cerr << debugMessage.str() << "\n\n";
 			} else {
-				std::cout << debugMessage.str() << "\n";
+				std::cout << debugMessage.str() << "\n\n";
 			}
 			fflush(stdout);
 #endif
