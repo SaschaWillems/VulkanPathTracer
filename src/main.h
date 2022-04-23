@@ -29,7 +29,7 @@ public:
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{};
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationStructureFeatures{};
 
-	AccelerationStructure bottomLevelAS{};
+	std::vector<AccelerationStructure> bottomLevelAS{};
 	AccelerationStructure topLevelAS{};
 
 	std::vector<VkRayTracingShaderGroupCreateInfoKHR> shaderGroups{};
@@ -66,10 +66,7 @@ public:
 
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
-	VkDescriptorSet descriptorSet;
 	VkDescriptorSetLayout descriptorSetLayout;
-
-	vkglTF::Model scene;
 
 	enum class MaterialType : uint32_t { 
 		Lambertian = 0,
@@ -82,14 +79,23 @@ public:
 		MaterialType type;
 		float _pad;
 	};
-	vks::Buffer materialBuffer;
 
-	uint32_t sceneIndex = 1;
+	std::vector<vkglTF::Model> models;
+
+	struct Scene {
+		vks::Buffer materialBuffer;
+		VkDescriptorSet descriptorSet;
+		AccelerationStructure bottomLevelAS{};
+		AccelerationStructure topLevelAS{};
+	} scene;
+
+	uint32_t sceneIndex = 3;
 
 	VulkanPathTracer();
 	~VulkanPathTracer();
 	uint64_t getBufferDeviceAddress(VkBuffer buffer);
-	void createBottomLevelAccelerationStructure();
+	auto createBottomLevelAccelerationInstance(uint32_t index);
+	void createBottomLevelAccelerationStructure(vkglTF::Model& model);
 	void createTopLevelAccelerationStructure();
 	void createShaderBindingTables();
 	void createDescriptorSets();
