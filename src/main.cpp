@@ -350,10 +350,7 @@ void VulkanPathTracer::createDescriptorSets()
 	// 1: Ray tracing result image
 	// 2: Ray tracing accumulation image
 	// 3: Uniform data
-	// 4: Scene vertex buffers
-	// 5: Scene index buffers
-	// 6: Scene materials buffer
-	// 7: Scene textures (optional)
+	// 4: Scene descriptors with buffer device addresses
 
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 		accelerationStructureWrite,
@@ -361,7 +358,6 @@ void VulkanPathTracer::createDescriptorSets()
 		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2, &accumImageDescriptor),
 		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3, &ubo.descriptor),
 		vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &sceneDescBuffer.descriptor),
-		//vks::initializers::writeDescriptorSet(scene.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &scene.materialBuffer.descriptor),
 	};
 
 	std::vector<VkDescriptorImageInfo> imageInfos{};
@@ -384,10 +380,8 @@ void VulkanPathTracer::createRayTracingPipeline()
 	// 1: Ray tracing result image
 	// 2: Ray tracing accumulation image
 	// 3: Uniform data
-	// 4: Scene vertex buffer
-	// 5: Scene index buffer
-	// 6: Scene materials buffer
-	// 7: Scene textures (optional)
+	// 4: Scene descriptors with buffer device addresses
+	// 5: Scene textures (optional)
 
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
 		vks::initializers::descriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
@@ -472,7 +466,6 @@ void VulkanPathTracer::createMaterialBuffer()
 			Material material;
 			material.baseColor = mat.baseColorFactor;
 			material.baseColor = glm::vec4(1.0f);
-			// @todo
 			material.baseColorTextureIndex = mat.baseColorTexture ? mat.baseColorTexture->index + textureOffset : -1;
 			material.normalTextureIndex = mat.normalTexture ? mat.normalTexture->index + textureOffset : -1;
 			material.type = MaterialType::Lambertian;
@@ -644,9 +637,10 @@ void VulkanPathTracer::prepare()
 		camera.setTranslation(glm::vec3(-9.7f, 0.9f, 0.3f));
 		camera.setRotation(glm::vec3(4.75f, -90.0f, 0.0f));
 		options.skyIntensity = 7.5f;
-		models.resize(2);
+		models.resize(3);
 		models[0].loadFromFile(getAssetPath() + "models/new_sponza/NewSponza_Main_Blender_glTF_sm.gltf", vulkanDevice, queue, glTFLoadingFlags);
 		models[1].loadFromFile(getAssetPath() + "models/new_sponza_curtains/NewSponza_Curtains_glTF.gltf", vulkanDevice, queue, glTFLoadingFlags);
+		models[2].loadFromFile(getAssetPath() + "models/new_sponza_ivy/NewSponza_IvyGrowth_glTF.gltf", vulkanDevice, queue, glTFLoadingFlags);
 	}
 
 
