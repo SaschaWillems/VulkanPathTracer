@@ -8,10 +8,20 @@ A playground for hardware accelerated path tracing using the official, cross-ven
 
 This is a personal playground, so things will keep changing and breaking.
 
-## Sponza
-
-The Sponza glTF scene has been taken from the [glTF sample models repository](https://github.com/KhronosGroup/glTF-Sample-Models) and has been slightly fixed (e.g. floating flower pots).
-
 ## Screenshots
 
-<img src="screenshots/sponza01.png" width="512px"> <img src="screenshots/sponza02.png" width="512px"> <img src="screenshots/sponza03.png" width="512px"> <img src="screenshots/cornellbox.png" width="512px">
+### Intel's Sponza 
+
+From https://www.intel.com/content/www/us/en/developer/topic-technology/graphics-research/samples.html
+
+<img src="screenshots/intelsponza01.png" width="512px"> <img src="screenshots/intelsponza02.png" width="512px">
+
+### Sponza
+
+From https://github.com/KhronosGroup/glTF-Sample-Models with some minor fixes (e.g. floating flower pots)
+
+<img src="screenshots/sponza01.png" width="512px"> <img src="screenshots/sponza02.png" width="512px"> <img src="screenshots/sponza03.png" width="512px"> 
+
+### Cornell Box
+
+<img src="screenshots/cornellbox.png" width="512px">
