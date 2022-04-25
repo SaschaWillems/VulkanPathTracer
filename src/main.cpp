@@ -638,7 +638,7 @@ void VulkanPathTracer::prepare()
 		camera.setRotation(glm::vec3(4.75f, -90.0f, 0.0f));
 		options.skyIntensity = 7.5f;
 		models.resize(3);
-		models[0].loadFromFile(getAssetPath() + "models/new_sponza/NewSponza_Main_Blender_glTF_sm.gltf", vulkanDevice, queue, glTFLoadingFlags);
+		models[0].loadFromFile(getAssetPath() + "models/new_sponza/NewSponza_Main_Blender_glTF.gltf", vulkanDevice, queue, glTFLoadingFlags);
 		models[1].loadFromFile(getAssetPath() + "models/new_sponza_curtains/NewSponza_Curtains_glTF.gltf", vulkanDevice, queue, glTFLoadingFlags);
 		models[2].loadFromFile(getAssetPath() + "models/new_sponza_ivy/NewSponza_IvyGrowth_glTF.gltf", vulkanDevice, queue, glTFLoadingFlags);
 	}
