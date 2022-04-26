@@ -614,7 +614,7 @@ void VulkanPathTracer::prepare()
 		camera.setTranslation(glm::vec3(0.0f, 1.0f, -3.0f));
 		options.sky = false;
 		models.resize(1);
-		models[1].loadFromFile(getAssetPath() + "models/CornellBox-Original.gltf", vulkanDevice, queue, glTFLoadingFlags);
+		models[0].loadFromFile(getAssetPath() + "models/CornellBox-Original.gltf", vulkanDevice, queue, glTFLoadingFlags);
 	}
 
 	if (sceneIndex == 1) {
