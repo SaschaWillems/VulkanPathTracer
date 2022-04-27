@@ -13,6 +13,7 @@ include_directories(external/imgui)
 include_directories(external/vulkan/include)
 include_directories(external/tinygltf)
 include_directories(external/volk)
+include_directories(external/basis_universal)
 
 include_directories(src/classes)
 include_directories(base)

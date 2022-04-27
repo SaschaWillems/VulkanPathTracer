@@ -15,6 +15,7 @@
 
 #include "volk/volk.h"
 #include "VulkanDevice.h"
+#include "basis_universal/transcoder/basisu_transcoder.h";
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
