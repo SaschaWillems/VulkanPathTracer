@@ -465,7 +465,6 @@ void VulkanPathTracer::createMaterialBuffer()
 		for (vkglTF::Material mat : model.materials) {
 			Material material;
 			material.baseColor = mat.baseColorFactor;
-			material.baseColor = glm::vec4(1.0f);
 			material.baseColorTextureIndex = mat.baseColorTexture ? mat.baseColorTexture->index + textureOffset : -1;
 			material.normalTextureIndex = mat.normalTexture ? mat.normalTexture->index + textureOffset : -1;
 			material.type = MaterialType::Lambertian;
@@ -605,7 +604,7 @@ void VulkanPathTracer::prepare()
 	// Instead of a simple triangle, we'll be loading a more complex scene for this example
 	// The shaders are accessing the vertex and index buffers of the scene, so the proper usage flag has to be set on the vertex and index buffers for the scene
 	vkglTF::memoryPropertyFlags = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-	const uint32_t glTFLoadingFlags = vkglTF::FileLoadingFlags::PreTransformVertices | vkglTF::PreMultiplyVertexColors | vkglTF::FileLoadingFlags::FlipY;
+	const uint32_t glTFLoadingFlags = vkglTF::FileLoadingFlags::PreTransformVertices | vkglTF::FileLoadingFlags::FlipY;
 
 	sceneIndex = 3;
 
